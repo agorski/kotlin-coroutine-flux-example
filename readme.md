@@ -8,6 +8,10 @@ There are 4 directories:
 * `kotlin-flux-sandbox` : app which communicates with _postgres_ & _sample-http-server_
 * `gatling-gradle-load` : load tests;works against _kotlin-flux-sandbox_
 
+#### Technicals:
+* kotlin : 1.4.31
+* java 11.0.10.9.1-amzn
+
 ### Run all
 #### STEP 1: POSTGRES DB
 1. go to `docker` directory
