@@ -11,6 +11,8 @@ There are 4 directories:
 
 ![Setup](misc/setup.png)
 
+SpringBoot endpoints:
+
 | Endpoint       | Description           |
 |------------- |---------------| 
 | `/db/all`| all entries from DB | 
