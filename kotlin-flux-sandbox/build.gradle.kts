@@ -17,6 +17,8 @@ repositories {
 }
 
 dependencies {
+	val resilience4jVersion = "1.7.0"
+
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
@@ -27,7 +29,12 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.1.0")
-	implementation ("io.netty:netty-resolver-dns-native-macos:4.1.60.Final:osx-x86_64")
+	implementation("io.netty:netty-resolver-dns-native-macos:4.1.60.Final:osx-x86_64")
+	// implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:2.0.1")
+	implementation("io.github.resilience4j:resilience4j-reactor:${resilience4jVersion}")
+	implementation("io.github.resilience4j:resilience4j-kotlin:$resilience4jVersion")
+	implementation("io.github.resilience4j:resilience4j-all:${resilience4jVersion}")
+
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	// runtimeOnly("io.micrometer:micrometer-registry-graphite")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

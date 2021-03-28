@@ -2,19 +2,32 @@ package goa.kotlinfluxsandbow.controllers
 
 import goa.kotlinfluxsandbow.Storage
 import goa.kotlinfluxsandbow.Texts
+import io.github.resilience4j.circuitbreaker.CircuitBreaker
+import io.github.resilience4j.kotlin.circuitbreaker.circuitBreaker
+import io.github.resilience4j.kotlin.circuitbreaker.executeSuspendFunction
+import io.github.resilience4j.kotlin.timelimiter.executeSuspendFunction
+import io.github.resilience4j.kotlin.timelimiter.timeLimiter
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator
+import io.github.resilience4j.timelimiter.TimeLimiter
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.runBlocking
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitExchange
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.time.Duration
 import java.util.*
+
 
 @Suppress("unused")
 @RestController
@@ -82,6 +95,77 @@ class WebCallAndStorageApi(val storage: Storage) {
                     Mono.error(CoinNotFoundError("$operation not found"))
                 }
             }
+    }
+
+    fun fallback(): ResponseEntity<String> {
+        return ResponseEntity.badRequest().body("fallback")
+    }
+
+    private val circuitBreaker = CircuitBreaker.of(
+        "cb",
+        io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.custom()
+            .minimumNumberOfCalls(2)
+            .waitDurationInOpenState(Duration.ofMillis(10000))
+            .slowCallDurationThreshold(Duration.ofSeconds(2))
+            .permittedNumberOfCallsInHalfOpenState(3)
+            .slidingWindowType(io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+            .slidingWindowSize(5)
+            .permittedNumberOfCallsInHalfOpenState(2)
+            .build()
+    )
+
+    private val timeLimiter = TimeLimiter.of(
+        "timelimiter named",
+        io.github.resilience4j.timelimiter.TimeLimiterConfig.custom().timeoutDuration(Duration.ofMillis(100)).build()
+    )
+
+    @GetMapping("/flux/resilient", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun withFluxAndResilient(): Flux<String> {
+        val exchangeToFlow: Flux<String> = prepareWebCall("long-json").exchangeToFlux {
+            Flux.error(java.lang.Exception("forced exception"))
+        }
+        return exchangeToFlow.transformDeferred(CircuitBreakerOperator.of(circuitBreaker))
+    }
+
+    @GetMapping("/mixed/resilient", produces = [MediaType.APPLICATION_JSON_VALUE])
+    suspend fun withFluxCircuitMixed(): Flow<String> {
+        val exchangeToFlow: Flux<String> = prepareWebCall("slow-json").exchangeToFlux { response ->
+            val statusCode = response.statusCode()
+            when {
+                statusCode.is2xxSuccessful -> {
+                    response.bodyToFlux(String::class.java)
+                }
+                statusCode.is4xxClientError -> {
+                    response.bodyToMono(String::class.java).flux()
+                }
+                else -> {
+                    Flux.error(java.lang.Exception("Unexpected response status $statusCode"))
+                }
+            }
+
+        }
+        return exchangeToFlow
+            .asFlow()
+            .timeLimiter(timeLimiter)
+            .circuitBreaker(circuitBreaker)
+    }
+
+    @GetMapping("/coroutine/resilient", produces = [MediaType.APPLICATION_JSON_VALUE])
+    suspend fun withFluxResilience(): String {
+        return circuitBreaker.executeSuspendFunction {
+            timeLimiter.executeSuspendFunction {
+                prepareWebCall("slow-json")
+                    .awaitExchange { clientResponse ->
+                        val statusCode = clientResponse.statusCode()
+                        if (statusCode.is2xxSuccessful) {
+                            clientResponse.awaitBody()
+                        } else {
+                            throw Exception("Unexpected response status $statusCode")
+                        }
+
+                    }
+            }
+        }
     }
 
     @GetMapping("/coroutine/{operation}", produces = [MediaType.APPLICATION_JSON_VALUE])
