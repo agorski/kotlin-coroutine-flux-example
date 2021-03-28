@@ -32,6 +32,23 @@ import java.util.*
 @Suppress("unused")
 @RestController
 class WebCallAndStorageApi(val storage: Storage) {
+    private val circuitBreaker = CircuitBreaker.of(
+        "cb",
+        io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.custom()
+            .minimumNumberOfCalls(2)
+            .waitDurationInOpenState(Duration.ofMillis(10000))
+            .slowCallDurationThreshold(Duration.ofSeconds(2))
+            .permittedNumberOfCallsInHalfOpenState(3)
+            .slidingWindowType(io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
+            .slidingWindowSize(5)
+            .permittedNumberOfCallsInHalfOpenState(2)
+            .build()
+    )
+
+    private val timeLimiter = TimeLimiter.of(
+        "timelimiter named",
+        io.github.resilience4j.timelimiter.TimeLimiterConfig.custom().timeoutDuration(Duration.ofMillis(100)).build()
+    )
 
     private val webClient: WebClient = WebClient.create()
 
@@ -53,71 +70,6 @@ class WebCallAndStorageApi(val storage: Storage) {
         print(UUID.randomUUID().toString())
         return storage.fillWithTest(howManySafe)
     }
-
-    @GetMapping("/blocking/{operation}", produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun withBlocking(@PathVariable operation: String): String? {
-        return prepareWebCall(operation)
-            .exchangeToMono { r ->
-                if (r.statusCode().is2xxSuccessful) {
-                    r.bodyToMono(String::class.java)
-                } else {
-                    Mono.error(CoinNotFoundError("$operation not found"))
-                }
-            }
-            // ugly, blocking overhead; you can also use blocking web client
-            .subscribeOn(Schedulers.parallel())
-            .share()
-            .block(Duration.ofSeconds(5L))
-    }
-
-    @GetMapping("/flux/{operation}", produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun withFlux(@PathVariable operation: String): Mono<String> {
-        return prepareWebCall(operation)
-            .exchangeToMono { r ->
-                if (r.statusCode().is2xxSuccessful) {
-                    r.bodyToMono(String::class.java)
-                } else {
-                    Mono.error(CoinNotFoundError("$operation not found"))
-                }
-            }
-    }
-
-    @GetMapping("/flux/{operation}/store", produces = [MediaType.TEXT_PLAIN_VALUE])
-    fun withFluxStore(@PathVariable operation: String): Mono<String> {
-        return prepareWebCall(operation)
-            .exchangeToMono { clientResponse ->
-                if (clientResponse.statusCode().is2xxSuccessful) {
-                    clientResponse
-                        .bodyToMono(String::class.java)
-                        .flatMap { text -> storage.insertWithMono(text) }
-                        .map { id -> "inserted id $id" }
-                } else {
-                    Mono.error(CoinNotFoundError("$operation not found"))
-                }
-            }
-    }
-
-    fun fallback(): ResponseEntity<String> {
-        return ResponseEntity.badRequest().body("fallback")
-    }
-
-    private val circuitBreaker = CircuitBreaker.of(
-        "cb",
-        io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.custom()
-            .minimumNumberOfCalls(2)
-            .waitDurationInOpenState(Duration.ofMillis(10000))
-            .slowCallDurationThreshold(Duration.ofSeconds(2))
-            .permittedNumberOfCallsInHalfOpenState(3)
-            .slidingWindowType(io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
-            .slidingWindowSize(5)
-            .permittedNumberOfCallsInHalfOpenState(2)
-            .build()
-    )
-
-    private val timeLimiter = TimeLimiter.of(
-        "timelimiter named",
-        io.github.resilience4j.timelimiter.TimeLimiterConfig.custom().timeoutDuration(Duration.ofMillis(100)).build()
-    )
 
     @GetMapping("/flux/resilient", produces = [MediaType.APPLICATION_JSON_VALUE])
     fun withFluxAndResilient(): Flux<String> {
@@ -166,6 +118,49 @@ class WebCallAndStorageApi(val storage: Storage) {
                     }
             }
         }
+    }
+
+    @GetMapping("/blocking/{operation}", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun withBlocking(@PathVariable operation: String): String? {
+        return prepareWebCall(operation)
+            .exchangeToMono { r ->
+                if (r.statusCode().is2xxSuccessful) {
+                    r.bodyToMono(String::class.java)
+                } else {
+                    Mono.error(CoinNotFoundError("$operation not found"))
+                }
+            }
+            // ugly, blocking overhead; you can also use blocking web client
+            .subscribeOn(Schedulers.parallel())
+            .share()
+            .block(Duration.ofSeconds(5L))
+    }
+
+    @GetMapping("/flux/{operation}", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun withFlux(@PathVariable operation: String): Mono<String> {
+        return prepareWebCall(operation)
+            .exchangeToMono { r ->
+                if (r.statusCode().is2xxSuccessful) {
+                    r.bodyToMono(String::class.java)
+                } else {
+                    Mono.error(CoinNotFoundError("$operation not found"))
+                }
+            }
+    }
+
+    @GetMapping("/flux/{operation}/store", produces = [MediaType.TEXT_PLAIN_VALUE])
+    fun withFluxStore(@PathVariable operation: String): Mono<String> {
+        return prepareWebCall(operation)
+            .exchangeToMono { clientResponse ->
+                if (clientResponse.statusCode().is2xxSuccessful) {
+                    clientResponse
+                        .bodyToMono(String::class.java)
+                        .flatMap { text -> storage.insertWithMono(text) }
+                        .map { id -> "inserted id $id" }
+                } else {
+                    Mono.error(CoinNotFoundError("$operation not found"))
+                }
+            }
     }
 
     @GetMapping("/coroutine/{operation}", produces = [MediaType.APPLICATION_JSON_VALUE])
