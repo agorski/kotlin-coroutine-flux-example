@@ -1,7 +1,33 @@
 # Kotlin Web Service with couroutines / flux test 
 
+## Target 
+Share my finding on:
+
+* how easy is to make SpringBoot apps non blockig
+* showing you obvious advantages of this approach using gatling load test.
+* demonstrating how seamless it composes with resilient approach
+
+
+## Examples in the project 
+
+* web calls using _reactor_ and _coroutine_ 
+* web call and then store in non blocing way with _reactor_ and _coroutine_
+* reactive approach using _resilience4j_
+* load test with gatling
+
+
+## Some words on _reactive_
+
+* [Hystrix](https://github.com/Netflix/Hystrix) is no longer in active development, and is currently in maintenance mode.
+* Spring Cloud Hystrix project is deprecated. So new applications should not use this project. [Resilience4j](https://resilience4j.readme.io/docs) is a new option for Spring developers to implement the circuit breaker pattern.
+[Nice reading on infoq.com](https://www.infoq.com/articles/spring-cloud-hystrix/)
+* [Istio](https://istio.io) is an intresting alternative how to make apps reactive in non programatic way
+
+You must decide how to make apps resilient. Do you want use programatic approach with resilience4j? Should istio Traffic Management do the job? Or maybe mixed approach is the right one for your use case? 
+
+
 ## Getting Started
----------------
+
 There are 4 directories:
 
 * `sample-http-server` : mock web server; simulates http server; works on port 9090 (fast, you can set up throttle)
