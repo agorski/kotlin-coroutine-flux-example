@@ -24,6 +24,9 @@ SpringBoot endpoints:
 | `/blocking/{operation}/store`| executes blocking web call to mock server and stores result in DB| 
 | `/flux/{operation}/store`| executes non blocking web call to mock server and stores result in DB using reactive driver and _flux_| 
 | `/coroutine/{operation}/store`| executes non blocking web call to mock server and stores result in DB using reactive driver and _coroutines_| 
+| `/flux/resilient` | resilient4j with _reactor_ | 
+| `/coroutine/resilient` | resilient4j with _coroutines_ | 
+| `/mixed/resilient` | resilient4j with _reactor & coroutines_ | 
 
 Operations on mock web server:
 
