@@ -10,10 +10,11 @@ Share my finding on:
 
 ## Examples in the project 
 
-* web calls using _reactor_ and _coroutine_ 
+* web calls using _reactor_ and _coroutine_. Here nice, deep reading on [allegro blog](https://blog.allegro.tech/2020/02/webflux-and-coroutines.html).
 * web call and then store in non blocing way with _reactor_ and _coroutine_
-* reactive approach using _resilience4j_
-* load test with gatling
+* reactive approach using _[Resilience4j](https://resilience4j.readme.io/docs)_
+* [R2DC](https://r2dbc.io) to work with SQL databases using a reactive API
+* load test with [gatling](https://gatling.io)
 
 
 ## Some words on _reactive_
