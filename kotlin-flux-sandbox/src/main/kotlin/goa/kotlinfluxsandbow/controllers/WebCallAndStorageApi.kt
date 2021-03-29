@@ -15,10 +15,7 @@ import kotlinx.coroutines.runBlocking
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitExchange
@@ -26,7 +23,6 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.time.Duration
-import java.util.*
 
 
 @Suppress("unused")
@@ -47,18 +43,17 @@ class WebCallAndStorageApi(val storage: Storage) {
 
     private val timeLimiter = TimeLimiter.of(
         "timelimiter named",
-        io.github.resilience4j.timelimiter.TimeLimiterConfig.custom().timeoutDuration(Duration.ofMillis(100)).build()
+        io.github.resilience4j.timelimiter.TimeLimiterConfig.custom().timeoutDuration(Duration.ofMillis(1000)).build()
     )
 
     private val webClient: WebClient = WebClient.create()
 
-    @GetMapping("/db/all")
+    @PostMapping("/db/all")
     suspend fun storageTest(): Flow<Texts> {
         return storage.getAll()
     }
 
-    // in real world should be post
-    @GetMapping("/db/clear")
+    @PostMapping("/db/clear")
     suspend fun clear() {
         return storage.clearDB()
     }
@@ -67,15 +62,15 @@ class WebCallAndStorageApi(val storage: Storage) {
     @GetMapping("/fill-with-test/{howMany}")
     suspend fun fillWithTestData(@PathVariable howMany: Int) {
         val howManySafe = if (howMany > 0) howMany else 1
-        print(UUID.randomUUID().toString())
         return storage.fillWithTest(howManySafe)
     }
 
     @GetMapping("/flux/resilient", produces = [MediaType.APPLICATION_JSON_VALUE])
     fun withFluxAndResilient(): Flux<String> {
-        val exchangeToFlow: Flux<String> = prepareWebCall("long-json").exchangeToFlux {
-            Flux.error(java.lang.Exception("forced exception"))
-        }
+        val exchangeToFlow: Flux<String> = prepareWebCall("long-json")
+            .exchangeToFlux {
+                Flux.error(java.lang.Exception("forced exception"))
+            }
         return exchangeToFlow.transformDeferred(CircuitBreakerOperator.of(circuitBreaker))
     }
 

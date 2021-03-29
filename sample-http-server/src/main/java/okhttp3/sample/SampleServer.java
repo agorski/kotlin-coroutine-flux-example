@@ -60,11 +60,11 @@ public class SampleServer extends Dispatcher {
         System.out.println("server started on port " + port);
     }
 
-    private final String shortJson() {
+    private String shortJson() {
         return "[{\"id\":4,\"someText\":\"883e11ad-0291-44cb-908b-6e18fd9b3888\"},{\"id\":5,\"someText\":\"" + UUID.randomUUID().toString() + "\"},{\"id\":6,\"someText\":\"" + UUID.randomUUID().toString() + "\"},{\"id\":7,\"someText\":\"" + UUID.randomUUID().toString() + "\"},{\"id\":8,\"someText\":\"" + UUID.randomUUID().toString() + "\"}]";
     }
 
-    private final String longJsonResponse() {
+    private String longJsonResponse() {
         return "[\n" +
                 "  {\n" +
                 "    \"_id\": \"" + System.currentTimeMillis() + "\",\n" +

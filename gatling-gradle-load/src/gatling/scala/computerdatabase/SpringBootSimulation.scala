@@ -62,10 +62,10 @@ class SpringBootSimulation extends Simulation {
       constantUsersPerSec(200).during(10.seconds).randomized,
     ).protocols(httpProtocol)
 */
-    scnFluxWebCall.inject(
+    scnCoroutineMix.inject(
       constantUsersPerSec(12).during(3.seconds),
-      rampUsers(60).during(5.seconds),
-      constantUsersPerSec(200).during(10.seconds).randomized,
+      rampUsers(10).during(5.seconds),
+      constantUsersPerSec(60).during(10.seconds).randomized,
     ).protocols(httpProtocol)
   )
 }
