@@ -97,3 +97,13 @@ Operations on mock web server:
 \d table name # table details
 
 ```
+
+## Conclusion
+
+* Coroutines uses imperative stype therefore easy to use and learn
+* Coroutines are build in in kotlin ( native support )
+* Rector uses functional, streamming like, programming style which could be nicer to read
+* Reactor & coroutines performance is similar depends on settings. Without tweaking coroutines seems to be faster
+* Reactor is **much harder to tweak** as it uses thread pool behimd the scene 
+* Reactor documentation is ( still ) better
+* Switch between _coroutines_, _reactor_, _RxJava_, _CompletableFuture_ is very easy - you can mix it easily
